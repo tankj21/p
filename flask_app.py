@@ -24,7 +24,6 @@ def fetch_latest_tweet():
     time_tag = tweet.select_one(".tweet-date a")
     tweet_link = f"{NITTER_BASE}{time_tag['href']}" if time_tag else "リンクなし"
 
-<<<<<<< HEAD
     image_tag = tweet.select_one(".attachment.image > a[href$='.jpg'], .attachment.image > a[href$='.png']")
     image_url = f"{NITTER_BASE}{image_tag['href']}" if image_tag else None
 
@@ -33,17 +32,6 @@ def fetch_latest_tweet():
         "link": tweet_link,
         "image": image_url
     }
-=======
-                payload = {
-                    "username": "ぽんちゃん見守り隊",
-                    "embeds": [embed]
-                }
-                requests.post(webhook_url, json=payload)
-            message = f"✅ {len(new_items)} 件の新着投稿を送信しました！"
-
-        # 定期実行ログもDiscordに送る
-        
->>>>>>> 21d0086251737669871e6cba26af087466dda355
 
 def send_to_discord(tweet):
     if not WEBHOOK_URL:
