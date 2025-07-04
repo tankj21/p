@@ -43,17 +43,14 @@ def notify():
                     embed["image"] = {"url": item["image"]}
 
                 payload = {
-                    "username": "X通知Bot",
+                    "username": "ぽんちゃん見守り隊",
                     "embeds": [embed]
                 }
                 requests.post(webhook_url, json=payload)
             message = f"✅ {len(new_items)} 件の新着投稿を送信しました！"
 
         # 定期実行ログもDiscordに送る
-        requests.post(webhook_url, json={
-            "username": "ぽんちゃん見守り隊",
-            "content": f"⏰ 定期実行が正常に完了しました！ {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        })
+        
 
         # 最後にID保存
         if new_items:
