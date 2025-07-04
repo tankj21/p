@@ -1,71 +1,66 @@
-from flask import Flask
 import requests
+from bs4 import BeautifulSoup
 import datetime
 import os
 
-app = Flask(__name__)
+# ========= 設定 =========
+USERNAME = "pon2325_vrc"
+NITTER_BASE = "https://nitter.net"  # 他のミラーでもOK
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Discord Webhook
 
-webhook_url = os.environ.get("WEBHOOK_URL")
-json_feed_url = os.environ.get("JSON_FEED_URL")
-id_file = "last_post_id.txt"
+def fetch_latest_tweet():
+    url = f"{NITTER_BASE}/{USERNAME}"
+    headers = {"User-Agent": "Mozilla/5.0"}
 
-@app.route("/notify")
-def notify():
-    try:
-        last_id = None
-        if os.path.exists(id_file):
-            with open(id_file, "r") as f:
-                last_id = f.read().strip()
+    res = requests.get(url, headers=headers)
+    soup = BeautifulSoup(res.text, "html.parser")
 
-        feed = requests.get(json_feed_url).json()
-        items = feed["items"]
+    tweet = soup.select_one(".timeline-item")  # 最新の1件
+    if not tweet:
+        return None
 
-        new_items = []
-        for item in items:
-            if item["id"] == last_id:
-                break
-            new_items.append(item)
-        new_items.reverse()
+    content = tweet.select_one(".tweet-content").get_text(strip=True)
 
-        # 投稿がなければ「新着なし」だけ送る
-        if not new_items:
-            message = "🟡 新しい投稿はありませんでした。"
-        else:
-            for item in new_items:
-                published = datetime.datetime.fromisoformat(item["date_published"].replace("Z", "+00:00"))
-                jst = published.astimezone(datetime.timezone(datetime.timedelta(hours=9)))
-                embed = {
-                    "title": item["title"],
-                    "description": f"{item['content_text']}\n🕒 {jst.strftime('%Y-%m-%d %H:%M')}\n🔗 [元ポスト]({item['url']})",
-                    "color": 0x1DA1F2,
-                }
-                if "image" in item:
-                    embed["image"] = {"url": item["image"]}
+    time_tag = tweet.select_one(".tweet-date a")
+    tweet_link = f"{NITTER_BASE}{time_tag['href']}" if time_tag else "リンクなし"
 
-                payload = {
-                    "username": "X通知Bot",
-                    "embeds": [embed]
-                }
-                requests.post(webhook_url, json=payload)
-            message = f"✅ {len(new_items)} 件の新着投稿を送信しました！"
+    image_tag = tweet.select_one(".attachment.image > a[href$='.jpg'], .attachment.image > a[href$='.png']")
+    image_url = f"{NITTER_BASE}{image_tag['href']}" if image_tag else None
 
-        # 定期実行ログもDiscordに送る
-        requests.post(webhook_url, json={
-            "username": "ぽんちゃん見守り隊",
-            "content": f"⏰ 定期実行が正常に完了しました！ {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        })
+    return {
+        "content": content,
+        "link": tweet_link,
+        "image": image_url
+    }
 
-        # 最後にID保存
-        if new_items:
-            with open(id_file, "w") as f:
-                f.write(new_items[-1]["id"])
+def send_to_discord(tweet):
+    if not WEBHOOK_URL:
+        print("❌ WEBHOOK_URL が設定されていません")
+        return
 
-        return message
+    embed = {
+        "title": "📢 新しい投稿！",
+        "description": tweet["content"],
+        "url": tweet["link"],
+        "color": 0x1DA1F2,
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
 
-    except Exception as e:
-        # エラーもDiscordに送信すると便利！
-        requests.post(webhook_url, json={
-            "username": "ぽんちゃん見守り隊",
-            "content": f"⚠️ エラー発生: {str(e)}"
-        })
-        return f"❌ エラー: {str(e)}"
+    if tweet["image"]:
+        embed["image"] = {"url": tweet["image"]}
+
+    payload = {
+        "username": "X通知Bot",
+        "embeds": [embed]
+    }
+
+    res = requests.post(WEBHOOK_URL, json=payload)
+    print("✅ Discordに送信しました" if res.status_code == 204 else f"❌ 失敗: {res.text}")
+
+# ========= 実行 =========
+if __name__ == "__main__":
+    tweet = fetch_latest_tweet()
+    if tweet:
+        send_to_discord(tweet)
+    else:
+        print("🔍 投稿が見つかりませんでした")
