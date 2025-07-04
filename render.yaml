@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: flask-discord-bot
+    env: python
+    plan: free
+    buildCommnad: ""
+    startCommand: gunicorn flask_app:app
+    envVars:
+      - key: WEBHOOK_URL
+        value: https://discord.com/api/webhooks/1390302823194824894/Jlyx5Qv2e1gs6CirT3u-GJO49KKyWroiNhMRMJOZ9ngDnE72vNMX2lQxI8LMFjVTZ9tP
+      - key: JSON_FEED_URL
+        value: https://rss.app/feeds/v1.1/alNPwBiDXUsXBbxn.json
