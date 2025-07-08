@@ -8,7 +8,7 @@ from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-USERNAME = "search?f=tweets&q=from%3Apon2325_vrc"  # ←リプライ含めた全投稿
+USERNAME = "search?f=tweets&q=pon2325_vrc"  # ←リプライ含めた全投稿
 NITTER_BASE = "https://nitter.net"
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 CSV_FILE = "sent_tweets.csv"
